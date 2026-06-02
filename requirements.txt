@@ -1,0 +1,13 @@
+# Robotic-Arm-002 — trajectory tracking RL (Python 3.10+)
+
+ 
+gymnasium>=1.1.1
+ 
+stable-baselines3>=2.0.0
+ 
+torch>=2.0.0
+ 
+numpy>=1.24.0
+matplotlib>=3.7.0
+ 
+tensorboard>=2.14.0

@@ -1,0 +1,67 @@
+<mujoco model="arm">
+
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
+
+  <default>
+    <joint damping="1.0" armature="0.1"/>
+    <motor ctrllimited="true" ctrlrange="-1 1"/>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 4" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+    <light pos="2 2 2" dir="-1 -1 -1" diffuse="0.4 0.4 0.4"/>
+    <geom name="floor" type="plane" size="2 2 0.1" rgba="0.75 0.75 0.75 1"/>
+
+    <!-- Fixed base -->
+    <body name="base" pos="0 0 0">
+      <geom type="cylinder" size="0.06 0.05" pos="0 0 0.05" rgba="0.3 0.3 0.3 1"/>
+
+      <!-- Joint 0: shoulder rotation (yaw, around Z) -->
+      <joint name="joint0" type="hinge" axis="0 0 1"
+             range="-3.14159 3.14159" pos="0 0 0.05"/>
+
+      <body name="link1" pos="0 0 0.1">
+        <geom type="capsule" size="0.035" fromto="0 0 0 0 0 0.28"
+              rgba="0.7 0.25 0.25 1"/>
+
+        <!-- Joint 1: shoulder pitch (around Y) -->
+        <joint name="joint1" type="hinge" axis="0 1 0"
+               range="-1.8 1.8" pos="0 0 0"/>
+
+        <body name="link2" pos="0 0 0.28">
+          <geom type="capsule" size="0.028" fromto="0 0 0 0 0 0.24"
+                rgba="0.25 0.65 0.25 1"/>
+
+          <!-- Joint 2: elbow pitch (around Y) -->
+          <joint name="joint2" type="hinge" axis="0 1 0"
+                 range="-2.4 2.4" pos="0 0 0"/>
+
+          <!-- End effector -->
+          <body name="ee" pos="0 0 0.24">
+            <geom type="sphere" size="0.022" rgba="0.9 0.1 0.1 1"/>
+            <!-- ee_site: the point we track and report position for -->
+            <site name="ee_site" pos="0 0 0" size="0.015" rgba="1 1 0 1"/>
+          </body>
+
+        </body>
+      </body>
+    </body>
+
+    <!-- Mocap target: moved by the env each step, no collision -->
+    <body name="target" pos="0 0.35 0.72" mocap="true">
+      <geom type="sphere" size="0.035"
+            rgba="0.1 0.9 0.1 0.6"
+            contype="0" conaffinity="0"/>
+      <site name="target_site" pos="0 0 0" size="0.01"/>
+    </body>
+
+  </worldbody>
+
+  <actuator>
+    <!-- Torque actuators on each joint, gear scales to reasonable torque -->
+    <motor name="act0" joint="joint0" gear="40"/>
+    <motor name="act1" joint="joint1" gear="60"/>
+    <motor name="act2" joint="joint2" gear="40"/>
+  </actuator>
+
+</mujoco>

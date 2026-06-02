@@ -1,0 +1,9 @@
+venv/
+models/
+logs/
+plots/
+__pycache__/
+*.pyc
+*.zip
+*.pkl
+.DS_Store
