@@ -58,7 +58,8 @@ def main():
     train_env = VecNormalize(train_env, norm_obs=False, norm_reward=True, clip_reward=10.0)
 
     # ── Eval env (no reward normalisation — raw rewards) ───
-    eval_env = Monitor(ArmTrackingEnv())
+    eval_env = make_vec_env(ArmTrackingEnv, n_envs=1, seed=args.seed)
+    eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=True, clip_reward=10.0)
 
     # ── PPO ───────────────────────────────────────────────
     model = PPO(
