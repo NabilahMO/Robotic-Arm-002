@@ -35,7 +35,7 @@ LAMBDA_CTRL   = 0.005
 LAMBDA_LIMIT  = 0.5      # penalty weight for approaching joint limits
 LIMIT_MARGIN  = 0.15     # radians from limit before penalty kicks in
 BONUS_CLOSE   = 0.5
-FRAME_SKIP    = 5
+FRAME_SKIP    = 4
 OBS_DIM       = 18       # was 12, now includes joint pos + vel
 ACT_DIM       = 3
 
@@ -55,8 +55,10 @@ OBS_SCALE = np.array([
 class ArmTrackingEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode=None, smooth_coef=0.0):
         super().__init__()
+        self.smooth_coef  = smooth_coef
+        self._prev_action = np.zeros(ACT_DIM)
         self.model = mujoco.MjModel.from_xml_path(XML_PATH)
         self.data  = mujoco.MjData(self.model)
 
@@ -86,6 +88,7 @@ class ArmTrackingEnv(gym.Env):
         self.data.qpos[:] = INIT_QPOS
         self.data.qvel[:] = INIT_QVEL
         self._step_count  = 0
+        self._prev_action = np.zeros(ACT_DIM)
         self._update_target(0)
         mujoco.mj_forward(self.model, self.data)
         return self._get_obs(), {}
@@ -173,6 +176,9 @@ class ArmTrackingEnv(gym.Env):
         reward -= LAMBDA_VEL   * vel_err
         reward -= LAMBDA_CTRL  * ctrl
         reward -= LAMBDA_LIMIT * limit_p
+        if self.smooth_coef > 0:
+            reward -= self.smooth_coef * float(np.linalg.norm(action - self._prev_action))
+        self._prev_action = action.copy()
         if dist < 0.05:
             reward += BONUS_CLOSE
 
