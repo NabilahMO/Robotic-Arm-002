@@ -107,5 +107,4 @@ After a full 2M step run, `evaluate.py` produces `plots/tracking_error.png` cont
 - [Gymnasium Documentation](https://gymnasium.farama.org)
 - Claude Code was used for code execution which was subsequently modified
 
-By Nabilah Muri- Okunola
-contact: nmokunola@icloud.com
+By Nabilah Muri- Okunola | nmokunola@icloud.com
