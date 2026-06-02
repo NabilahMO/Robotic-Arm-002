@@ -65,7 +65,7 @@ def main():
     model = PPO(
         policy="MlpPolicy",
         env=train_env,
-        learning_rate=3e-4,
+        learning_rate=lambda progress: 3e-4 * (0.5 * (1 + np.cos(np.pi * (1 - progress)))),
         n_steps=4096,        # longer rollouts = better gradient estimates
         batch_size=256,
         n_epochs=10,
