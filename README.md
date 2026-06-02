@@ -1,129 +1,108 @@
-# Robotic-Arm-002 — Trajectory Tracking RL
+# Robotic-Arm-002
 
-PPO agent controlling a 3-DOF robotic arm to track a 3D Lissajous trajectory.
-Built on raw MuJoCo — no gymnasium-robotics dependency.
+## Overview
+
+This project trains a reinforcement learning-based PPO agent to control a simulated 3-joint robotic arm so that its end-effector follows a continuously moving 3D target. The target traces a Lissajous curve.
+
+The environment is built directly on MuJoCo to allow for full control over the physics model, observation space, reward function, and episode structure. Training uses Stable-Baselines3.
+
+**Results after 2M training steps:**
+- Mean tracking error: **2.3 cm**
+- Steps within 5 cm of target: **95.5%**
+- All three axes (X, Y, Z) tracked simultaneously
 
 ---
 
-## Setup
+## Setting Up
+
+**Requirements:** Python 3.10+ (3.13 or 3.14 recommended on macOS)
 
 ```bash
-# Python 3.10+ required (3.13 recommended)
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# Clone the repo
+git clone https://github.com/NabilahMO/Robotic-Arm-002.git
+cd Robotic-Arm-002
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate          # macOS / Linux
+# venv\Scripts\activate           # Windows
+
+# Install dependencies
+pip install mujoco gymnasium stable-baselines3 numpy matplotlib tensorboard tqdm rich
 ```
 
----
-
-## Project structure
-
-```
-Robotic-Arm-002/
-├── envs/
-│   ├── arm.xml        MuJoCo model: 3-DOF arm + mocap target sphere
-│   └── arm_env.py     Gymnasium env wrapper
-├── trajectories/
-│   └── lissajous.py   3D Lissajous trajectory generator
-├── train.py           PPO training
-├── evaluate.py        Evaluation + plots
-└── requirements.txt
-```
-
----
-
-## Verify environment
+**Verify the environment loads correctly:**
 
 ```bash
-python envs/arm_env.py
-```
-
-Expected output — random policy baseline, one episode:
-```
-Obs space  : Box(-inf, inf, (12,), float32)
-Act space  : Box(-1.0, 1.0, (3,), float32)
-Episode len: ~3141 steps
-...
-Mean error : ~0.4 m   (random policy, expect high)
+python3 envs/arm_env.py
+python3 trajectories/lissajous.py
 ```
 
 ---
 
-## Verify trajectory
+## Key Scripts
 
-```bash
-python trajectories/lissajous.py
-```
+### `envs/arm.xml`
+MuJoCo model defining the 3-DOF arm. Three hinge joints (shoulder yaw, shoulder pitch, elbow pitch) with explicit inertial properties and a mocap sphere that serves as the moving target marker.
 
----
+### `envs/arm_env.py`
+Custom Gymnasium environment wrapping the MuJoCo model.
 
-## Train
-
-```bash
-# Sanity check (fast, ~2 min)
-python train.py --timesteps 50000
-
-# Full training (~20-40 min on M-series Mac)
-python train.py --timesteps 500000
-
-# Longer run for better tracking
-python train.py --timesteps 1000000 --n-envs 8
-```
-
-Checkpoints saved to `models/ppo_arm_<timestamp>/`.
-Monitor with:
-```bash
-tensorboard --logdir logs/
-```
-
----
-
-## Evaluate
-
-```bash
-# Plot tracking error (headless)
-python evaluate.py --model models/ppo_arm_<timestamp>/best_model
-
-# With MuJoCo viewer (opens a window)
-python evaluate.py --model models/ppo_arm_<timestamp>/best_model --render
-```
-
-Saves `plots/tracking_error.png` with:
-- 3D trajectory overlay (target vs EE)
-- Per-axis tracking
-- Error over time
-- Reward over time
-
----
-
-## Observation space (12-dim)
-
-| Index | Meaning |
+| Property | Detail |
 |---|---|
-| 0–2 | End-effector position (xyz) |
-| 3–5 | End-effector velocity (xyz) |
-| 6–8 | Target position (xyz) |
-| 9–11 | Target velocity (xyz) |
+| Observation | 18-dim: EE pos/vel, target pos/vel, joint pos/vel |
+| Action | 3-dim continuous `[-1, 1]` — normalised joint torques |
+| Reward | `-dist - 0.1·vel_err - 0.005·ctrl - 0.5·limit_penalty + 0.5·(if dist < 5cm)` |
+| Episode length | One Lissajous period (~897 env steps, ~9 sim seconds) |
 
-## Action space (3-dim, [-1, 1])
-
-Normalised torques: `[joint0, joint1, joint2]`
-
-## Reward
+### `trajectories/lissajous.py`
+Generates the 3D Lissajous target trajectory. Parameterised by amplitude, frequency, and phase per axis. Returns position and velocity at any timestep.
 
 ```
-r = -||ee_pos - target_pos|| - 0.05 * ||ee_vel - target_vel|| - 0.001 * ||action||
+x(t) = cx + Ax·sin(ax·t + dx)
+y(t) = cy + Ay·sin(ay·t + dy)
+z(t) = cz + Az·sin(az·t + dz)
+```
+
+### `train.py`
+PPO training script using Stable-Baselines3.
+
+Key hyperparameters: `lr=3e-4`, `ent_coef=0.02`, `n_steps=4096`, `batch_size=256`, network `[256, 256]` for both actor and critic.
+
+Saves checkpoints to `models/ppo_arm_<timestamp>/` and logs to `logs/` for TensorBoard.
+
+### `evaluate.py`
+Loads a trained model and runs one evaluation episode. Prints tracking statistics and saves a plot.
+
+```bash
+python3 evaluate.py --model models/ppo_arm_<timestamp>/best_model \
+                    --vecnorm models/ppo_arm_<timestamp>/vecnorm.pkl
 ```
 
 ---
 
-## What to expect
+## Expected Outputs
 
-| Training budget | Mean tracking error |
-|---|---|
-| 50k steps (sanity) | ~0.3–0.4 m |
-| 200k steps | ~0.15–0.25 m |
-| 500k steps | ~0.05–0.15 m |
-| 1M steps | ~0.02–0.08 m |
+| Training budget | Mean tracking error | Notes |
+|---|---|---|
+| 50k steps | ~0.35–0.50 m | Random-policy baseline, arm barely moving |
+| 200k steps | ~0.25–0.35 m | Arm starts following trajectory shape |
+| 500k steps | ~0.15–0.25 m | X and Y tracking, Z still lagging |
+| 2M steps | **~0.02–0.05 m** | All three axes tracking, >95% within 5cm |
 
-A mean error under 5 cm is excellent for this task.
+After a full 2M step run, `evaluate.py` produces `plots/tracking_error.png` containing:
+- 3D overlay of EE path vs target path
+- Per-axis tracking (X, Y, Z)
+- Tracking error over the episode
+- Reward per step
+
+---
+
+## References
+
+- Schulman et al. (2017) — [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347)
+- Todorov et al. (2012) — [MuJoCo: A physics engine for model-based control](https://homes.cs.washington.edu/~todorov/papers/TodorovIROS12.pdf)
+- Raffin et al. (2021) — [Stable-Baselines3: Reliable Reinforcement Learning Implementations](https://jmlr.org/papers/v22/20-1364.html)
+- [MuJoCo Documentation](https://mujoco.readthedocs.io)
+- [Gymnasium Documentation](https://gymnasium.farama.org)
+- Claude Code was used for code execution which was subsequently modified 
