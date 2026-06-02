@@ -105,4 +105,7 @@ After a full 2M step run, `evaluate.py` produces `plots/tracking_error.png` cont
 - Raffin et al. (2021) — [Stable-Baselines3: Reliable Reinforcement Learning Implementations](https://jmlr.org/papers/v22/20-1364.html)
 - [MuJoCo Documentation](https://mujoco.readthedocs.io)
 - [Gymnasium Documentation](https://gymnasium.farama.org)
-- Claude Code was used for code execution which was subsequently modified 
+- Claude Code was used for code execution which was subsequently modified
+
+By Nabilah Muri- Okunola
+contact: nmokunola@icloud.com
